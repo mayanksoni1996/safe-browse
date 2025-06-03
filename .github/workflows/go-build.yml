@@ -23,10 +23,10 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: '1.24'
-
+      - name: Change to Go Home Directory
+        run: cd dns-resolver
       - name: Build
         run: |
-          cd dns-resolver \n
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o dns-resolver-${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload artifact

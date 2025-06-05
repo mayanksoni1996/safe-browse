@@ -26,7 +26,7 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
 
     @Override
     public void truncateTrustedDomains() {
-        mongoTemplate.dropCollection(TrustedDomain.class).subscribe();
+        mongoTemplate.dropCollection(TrustedDomainDocument.class).subscribe();
     }
 
     private TrustedDomainDocument createTrustedDomainDocument(String domainName) {
@@ -45,7 +45,9 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
 
     @Override
     public void removeTrustedDomain(String domainName) {
-
+        Query query = Query.query(Criteria.where("tld").is(DomainUtils.extractTLDFromDomain(domainName)).and("domainName").is(domainName));
+        this.mongoTemplate.remove(query, TrustedDomainDocument.class).subscribe();
+        log.info("Removed trusted domain: {}", domainName);
     }
 
     @Override
@@ -65,7 +67,7 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
 
     @Override
     public Flux<TrustedDomain> getTrustedDomains() {
-        return mongoTemplate.findAll(TrustedDomain.class);
+        return mongoTemplate.findAll(TrustedDomainDocument.class).map(TRUSTED_DOMAIN_MAPPER::toModel);
     }
 
     @Override

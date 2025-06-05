@@ -5,6 +5,10 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import tech.mayanksoni.threatdetectionbackend.annotations.CreationTimestamp;
 
+import java.time.Instant;
+
+import java.time.Instant;
+
 @Document
 @Builder
 @NoArgsConstructor
@@ -17,5 +21,5 @@ public class TrustedDomainDocument {
     private String domainName;
     private String tld;
     @CreationTimestamp
-    private String createdAt;
+    private Instant createdAt;
 }

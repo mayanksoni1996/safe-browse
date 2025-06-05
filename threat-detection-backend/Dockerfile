@@ -5,7 +5,8 @@ RUN gradle build -x test
 
 FROM alpine:latest AS downloader
 RUN apk add --no-cache curl jq
-ARG API_URL=https://tranco-list.eu/api/lists/date/latest
+#ARG API_URL=https://tranco-list.eu/api/lists/date/latest
+ARG API_URL=https://tranco-list.eu/api/lists/date/2025-04-01
 RUN echo "Fetching the latest Tranco list..." && \
     response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" "$API_URL") && \
     http_status=$(echo "$response" | sed -n 's/.*HTTP_STATUS://p') && \

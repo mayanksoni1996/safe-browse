@@ -7,6 +7,7 @@ import tech.mayanksoni.threatdetectionbackend.models.TrustedDomain;
 import java.util.List;
 
 public interface TrustedDomainDataManager {
+    Mono<Long> countTrustedDomains();
     void truncateTrustedDomains();
     void addTrustedDomain(String domainName);
     void removeTrustedDomain(String domainName);
@@ -15,5 +16,5 @@ public interface TrustedDomainDataManager {
     Flux<TrustedDomain> getTrustedDomainsByTLD(String tld);
     Mono<TrustedDomain> getTrustedDomainByDomainName(String domainName);
     Mono<Boolean> isTrustedDomain(String domainName);
-    
+
 }

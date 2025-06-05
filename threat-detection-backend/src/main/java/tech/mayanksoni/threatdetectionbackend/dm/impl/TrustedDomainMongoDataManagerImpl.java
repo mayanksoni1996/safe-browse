@@ -25,6 +25,13 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
     private final TrustedDomainMapper TRUSTED_DOMAIN_MAPPER;
 
     @Override
+    public Mono<Long> countTrustedDomains() {
+        return mongoTemplate.count(new Query(), TrustedDomainDocument.class)
+                .doOnSuccess(count -> log.info("Counted {} trusted domains", count))
+                .doOnError(e -> log.error("Error counting trusted domains: {}", e.getMessage()));
+    }
+
+    @Override
     public void truncateTrustedDomains() {
         mongoTemplate.dropCollection(TrustedDomainDocument.class).subscribe();
     }
@@ -57,11 +64,10 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
             TrustedDomainDocument trustedDomainDocument = createTrustedDomainDocument(domain);
             trustedDomains.add(trustedDomainDocument);
         });
-        this.mongoTemplate.save(trustedDomains).doOnSuccess(s -> {
-            log.info("Successfully added trusted domains: {}", trustedDomains.size());
-        }).doOnError(e -> {
-            log.error("Error adding trusted domains: {}", e.getMessage());
-        }).subscribe();
+        this.mongoTemplate.insertAll(trustedDomains)
+                .doOnComplete(() -> log.info("Successfully added trusted domains: {}", trustedDomains.size()))
+                .doOnError(e -> log.error("Error adding trusted domains: {}", e.getMessage()))
+                .subscribe();
         log.info("Started creating trusted domains for {} records", trustedDomains.size());
     }
 

@@ -25,10 +25,12 @@ repositories {
 }
 ext{
     set('mapStructVersion', '1.6.3')
+    set('openCSVVersion', '5.11')
 }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation "com.opencsv:opencsv:${openCSVVersion}"
     implementation "org.mapstruct:mapstruct:${mapStructVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapStructVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
@@ -36,11 +38,17 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     // OpenAPI Documentation
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.4.0'
+    // OpenCSV dependencies
+    implementation 'org.apache.commons:commons-lang3'
+    implementation 'org.apache.commons:commons-text'
+    implementation 'commons-beanutils:commons-beanutils'
+    implementation 'org.apache.commons:commons-collections4'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'tech.mayanksoni:threat-detection-backend:0.0.1-SNAPSHOT'
+    // Remove circular dependency
+    // annotationProcessor 'tech.mayanksoni:threat-detection-backend:0.0.1-SNAPSHOT'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'

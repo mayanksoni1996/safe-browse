@@ -25,7 +25,7 @@ RUN echo "Fetching the latest Tranco list..." && \
         echo "Response: $response_body"; \
         exit 1; \
     fi
-FROM eclipse-temurin:21.0.6_7-jre-ubi9-minimal
+FROM eclipse-temurin:21.0.6_7-jre-ubi9-minimal AS runtime
 WORKDIR /app
 VOLUME /data/trusted
 ENV SPRING_PROFILES_ACTIVE=prod

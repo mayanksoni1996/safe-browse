@@ -8,10 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import tech.mayanksoni.threatdetectionbackend.models.DomainTyposquattingValidationResults;
 import tech.mayanksoni.threatdetectionbackend.processor.DomainCheckProcessor;
@@ -47,10 +44,10 @@ public class CheckDomainController {
                     content = @Content
             )
     })
-    @GetMapping("/{domainName}")
+    @GetMapping
     public Mono<DomainTyposquattingValidationResults> validateDomainForTyposquatting(
             @Parameter(description = "Domain name to validate", required = true)
-            @PathVariable String domainName) {
+            @RequestParam String domainName) {
         return domainCheckProcessor.checkDomain(domainName);
     }
 }

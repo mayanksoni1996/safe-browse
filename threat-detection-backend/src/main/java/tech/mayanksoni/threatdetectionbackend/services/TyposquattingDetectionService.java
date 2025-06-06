@@ -67,11 +67,12 @@ public class TyposquattingDetectionService {
                 .switchIfEmpty(
                     // If no exact match, check for typosquatting
                     trustedDomains
-                        .flatMap(storedDomain -> {
+                        .concatMap(storedDomain -> {
                             int editDistance = EditDistanceUtil.calculateEditDistance(domainName, storedDomain.getDomainName());
                             return Mono.just(new Object[] {storedDomain, editDistance});
                         })
                         .filter(result -> (int)result[1] <= EDIT_DISTANCE_THRESHOLD)
+                        .take(1)  // Take only the first match below threshold to avoid processing all domains
                         .next()
                         .flatMap(result -> {
                             TrustedDomain closestDomain = (TrustedDomain)result[0];

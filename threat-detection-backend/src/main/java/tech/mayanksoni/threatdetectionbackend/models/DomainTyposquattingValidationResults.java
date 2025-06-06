@@ -14,6 +14,20 @@ public record DomainTyposquattingValidationResults(
         String closestMatchingDomain,
 
         @Schema(description = "The edit distance to the closest matching domain", example = "1")
-        Integer editDistance
+        Integer editDistance,
+
+        @Schema(description = "Indicates if the domain sounds similar to a trusted domain", example = "true")
+        Boolean isPhoneticMatch,
+
+        @Schema(description = "The phonetically matching trusted domain, if any", example = "example.com")
+        String phoneticMatchingDomain,
+
+        @Schema(description = "The type of phonetic algorithm that matched (SOUNDEX, METAPHONE, DOUBLE_METAPHONE)", example = "SOUNDEX")
+        String phoneticMatchType
 ) {
+    // Constructor with original parameters for backward compatibility
+    public DomainTyposquattingValidationResults(boolean isTyposquatted, String domainName, 
+                                               String closestMatchingDomain, Integer editDistance) {
+        this(isTyposquatted, domainName, closestMatchingDomain, editDistance, null, null, null);
+    }
 }

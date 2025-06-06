@@ -15,7 +15,7 @@ RUN echo "Fetching the latest Tranco list..." && \
         echo "Request successful. Extracting the latest list_id from the response..."; \
         latest_id=$(echo "$response_body" | jq -r '.list_id'); \
         echo "Latest list_id: $latest_id"; \
-        echo "Downloading the latest Tranco list..."; \
+        echo "Downloading the latest Tranco list... using $latest_id"; \
         download_url="https://tranco-list.eu/download/$latest_id"; \
         curl -L -o tranco_latest.csv "$download_url"; \
         sed -i '1s/^/rank,domain\n/' tranco_latest.csv; \

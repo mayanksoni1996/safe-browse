@@ -50,7 +50,7 @@ public class TyposquattingDetectionService {
     public Mono<DomainTyposquattingValidationResults> checkDomainForTypoSquatting(String domainName) {
         Flux<TrustedDomain> trustedDomains = trustedDomainDataManager.getTrustedDomainsByTLD(DomainUtils.extractTLDFromDomain(domainName));
 
-        // Check for exact match first
+        // Check for the exact match first
         return trustedDomains
                 .filter(storedDomain -> storedDomain.getDomainName().equalsIgnoreCase(domainName))
                 .next()
@@ -60,7 +60,7 @@ public class TyposquattingDetectionService {
                     return Mono.just(new DomainTyposquattingValidationResults(
                             false,
                             domainName,
-                            exactMatch.getDomainName() + "." + exactMatch.getTld(),
+                            exactMatch.getDomainName(),
                             0
                     ));
                 })
@@ -76,7 +76,7 @@ public class TyposquattingDetectionService {
                         .flatMap(result -> {
                             TrustedDomain closestDomain = (TrustedDomain)result[0];
                             int editDistance = (int)result[1];
-                            String closestDomainName = closestDomain.getDomainName() + "." + closestDomain.getTld();
+                            String closestDomainName = closestDomain.getDomainName();
                             log.info("Typo-squatting detected for domain: {} with edit distance: {} to domain: {}", 
                                     domainName, editDistance, closestDomainName);
                             return Mono.just(new DomainTyposquattingValidationResults(

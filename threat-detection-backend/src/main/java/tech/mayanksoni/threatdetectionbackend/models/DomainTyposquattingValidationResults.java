@@ -8,6 +8,12 @@ public record DomainTyposquattingValidationResults(
         boolean isTyposquatted,
 
         @Schema(description = "The domain name that was validated", example = "example.com")
-        String domainName
+        String domainName,
+
+        @Schema(description = "The closest matching trusted domain, if typosquatting is detected", example = "example.com")
+        String closestMatchingDomain,
+
+        @Schema(description = "The edit distance to the closest matching domain", example = "1")
+        Integer editDistance
 ) {
 }

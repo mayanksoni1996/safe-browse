@@ -32,8 +32,8 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
     }
 
     @Override
-    public void truncateTrustedDomains() {
-        mongoTemplate.dropCollection(TrustedDomainDocument.class).subscribe();
+    public Mono<Void> truncateTrustedDomains() {
+       return mongoTemplate.dropCollection(TrustedDomainDocument.class).doOnSuccess(success -> log.info("Truncated trusted domains"));
     }
 
     private TrustedDomainDocument createTrustedDomainDocument(String domainName) {

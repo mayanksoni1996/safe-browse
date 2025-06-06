@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface TrustedDomainDataManager {
     Mono<Long> countTrustedDomains();
-    void truncateTrustedDomains();
+    Mono<Void> truncateTrustedDomains();
     void addTrustedDomain(String domainName);
     void removeTrustedDomain(String domainName);
     void addTrustedDomain(List<String> domains);

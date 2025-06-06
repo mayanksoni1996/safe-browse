@@ -8,6 +8,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tech.mayanksoni.threatdetectionbackend.configuration.ThreatDetectionConfig;
 import tech.mayanksoni.threatdetectionbackend.dm.TrustedDomainDataManager;
+import tech.mayanksoni.threatdetectionbackend.models.DomainTyposquattingValidationResults;
 import tech.mayanksoni.threatdetectionbackend.models.TrustedDomain;
 import tech.mayanksoni.threatdetectionbackend.utils.DomainUtils;
 import tech.mayanksoni.threatdetectionbackend.utils.EditDistanceUtil;
@@ -39,32 +40,58 @@ public class TyposquattingDetectionService {
                         if (trustedDomainsFromTrancoFile.isEmpty()) {
                             log.warn("No trusted domains found in the Tranco file. Initialization skipped.");
                         } else {
+                            this.trustedDomainDataManager.truncateTrustedDomains().subscribe();
                             log.info("Loading trusted domains. DB count: {}, File count: {}", dbCount, fileRecordsCount);
                             this.trustedDomainDataManager.addTrustedDomain(trustedDomainsFromTrancoFile.stream().map(record -> record[1]).toList());
                         }
                     }
                 });
     }
-    public Mono<Boolean> checkDomainForTypoSquatting(String domainName) {
+    public Mono<DomainTyposquattingValidationResults> checkDomainForTypoSquatting(String domainName) {
         Flux<TrustedDomain> trustedDomains = trustedDomainDataManager.getTrustedDomainsByTLD(DomainUtils.extractTLDFromDomain(domainName));
-        Mono<Boolean> exactMatchExists = trustedDomains.filter(storedDomain -> storedDomain.getDomainName().equalsIgnoreCase(domainName)).next().flatMap(exactMatch -> {
-            log.info("Exact match found for domain: {}", domainName);
-            return Mono.just(false); // No typo-squatting if an exact match is found
-        }).switchIfEmpty(Mono.just(false));
-        return exactMatchExists.flatMap(isExactMatch -> {
-            if (isExactMatch) {
-                log.info("Exact match exists for domain: {}, no typo-squatting detected.", domainName);
-                return Mono.just(false); // If an exact match exists, no typo-squatting
-            }
-            return trustedDomains
-                    .map(storedDomain -> EditDistanceUtil.calculateEditDistance(domainName, storedDomain.getDomainName()))
-                    .filter(editDistance -> editDistance <= EDIT_DISTANCE_THRESHOLD)
-                    .next()
-                    .flatMap(editDistance -> {
-                        log.info("Typo-squatting detected for domain: {} with edit distance: {}", domainName, editDistance);
-                        return Mono.just(true);
-                    })
-                    .switchIfEmpty(Mono.just(false));
-        });
+
+        // Check for exact match first
+        return trustedDomains
+                .filter(storedDomain -> storedDomain.getDomainName().equalsIgnoreCase(domainName))
+                .next()
+                .flatMap(exactMatch -> {
+                    log.info("Exact match found for domain: {}", domainName);
+                    // No typo-squatting if an exact match is found
+                    return Mono.just(new DomainTyposquattingValidationResults(
+                            false,
+                            domainName,
+                            exactMatch.getDomainName() + "." + exactMatch.getTld(),
+                            0
+                    ));
+                })
+                .switchIfEmpty(
+                    // If no exact match, check for typosquatting
+                    trustedDomains
+                        .flatMap(storedDomain -> {
+                            int editDistance = EditDistanceUtil.calculateEditDistance(domainName, storedDomain.getDomainName());
+                            return Mono.just(new Object[] {storedDomain, editDistance});
+                        })
+                        .filter(result -> (int)result[1] <= EDIT_DISTANCE_THRESHOLD)
+                        .next()
+                        .flatMap(result -> {
+                            TrustedDomain closestDomain = (TrustedDomain)result[0];
+                            int editDistance = (int)result[1];
+                            String closestDomainName = closestDomain.getDomainName() + "." + closestDomain.getTld();
+                            log.info("Typo-squatting detected for domain: {} with edit distance: {} to domain: {}", 
+                                    domainName, editDistance, closestDomainName);
+                            return Mono.just(new DomainTyposquattingValidationResults(
+                                    true,
+                                    domainName,
+                                    closestDomainName,
+                                    editDistance
+                            ));
+                        })
+                        .switchIfEmpty(Mono.just(new DomainTyposquattingValidationResults(
+                                false,
+                                domainName,
+                                null,
+                                null
+                        )))
+                );
     }
 }

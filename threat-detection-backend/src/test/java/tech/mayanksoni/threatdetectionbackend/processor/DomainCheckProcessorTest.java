@@ -26,9 +26,14 @@ class DomainCheckProcessorTest {
         // Given
         String domainName = "example.com";
         boolean isTyposquatted = true;
-        
+        String closestMatchingDomain = "exampie.com";
+        int editDistance = 1;
+
+        DomainTyposquattingValidationResults mockResults = new DomainTyposquattingValidationResults(
+                isTyposquatted, domainName, closestMatchingDomain, editDistance);
+
         when(typosquattingDetectionService.checkDomainForTypoSquatting(domainName))
-                .thenReturn(Mono.just(isTyposquatted));
+                .thenReturn(Mono.just(mockResults));
 
         // When
         Mono<DomainTyposquattingValidationResults> result = domainCheckProcessor.checkDomain(domainName);
@@ -37,7 +42,9 @@ class DomainCheckProcessorTest {
         StepVerifier.create(result)
                 .expectNextMatches(validationResults -> 
                         validationResults.isTyposquatted() == isTyposquatted && 
-                        validationResults.domainName().equals(domainName))
+                        validationResults.domainName().equals(domainName) &&
+                        validationResults.closestMatchingDomain().equals(closestMatchingDomain) &&
+                        validationResults.editDistance() == editDistance)
                 .verifyComplete();
     }
 
@@ -45,7 +52,7 @@ class DomainCheckProcessorTest {
     void checkDomain_shouldHandleEmptyMono() {
         // Given
         String domainName = "example.com";
-        
+
         when(typosquattingDetectionService.checkDomainForTypoSquatting(domainName))
                 .thenReturn(Mono.empty());
 

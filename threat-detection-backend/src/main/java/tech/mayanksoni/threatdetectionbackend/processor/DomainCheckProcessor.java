@@ -15,7 +15,6 @@ public class DomainCheckProcessor {
 
     public Mono<DomainTyposquattingValidationResults> checkDomain(String domainName){
         log.info("Checking domain for typosquatting: {}", domainName);
-        return typosquattingDetectionService.checkDomainForTypoSquatting(domainName)
-                .map(isTyposquatted -> new DomainTyposquattingValidationResults(isTyposquatted, domainName));
+        return typosquattingDetectionService.checkDomainForTypoSquatting(domainName);
     }
 }

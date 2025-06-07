@@ -68,7 +68,7 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
         int maxThreads = threatDetectionConfig.getMaxThreads();
         boolean enableParallelProcessing = threatDetectionConfig.isEnableParallelProcessing();
 
-        log.info("Adding trusted domains with batch size: {}, max threads: {}, parallel processing: {}", 
+        log.info("Adding trusted domains with batch size: {}, max threads: {}, parallel processing: {}",
                 batchSize, maxThreads, enableParallelProcessing);
 
         if (domains.isEmpty()) {
@@ -76,27 +76,40 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
             return;
         }
 
-        // Create batches of domains
-        List<List<String>> batches = createBatches(domains, batchSize);
-        log.info("Split {} domains into {} batches", domains.size(), batches.size());
+        // Use a lightweight iterator to avoid holding all batches in memory
+        int totalBatches = (domains.size() + batchSize - 1) / batchSize;
+        log.info("Split {} domains into {} batches", domains.size(), totalBatches);
 
-        if (enableParallelProcessing && batches.size() > 1) {
-            // Process batches in parallel
-            ExecutorService executorService = Executors.newFixedThreadPool(
-                    Math.min(maxThreads, batches.size()));
+        Runnable batchProcessor = () -> {
+            for (int i = 0; i < totalBatches; i++) {
+                int fromIndex = i * batchSize;
+                int toIndex = Math.min((i + 1) * batchSize, domains.size());
+                List<String> batch = domains.subList(fromIndex, toIndex);
+                processBatch(batch);
+            }
+        };
 
+        if (enableParallelProcessing && totalBatches > 1) {
+            ExecutorService executorService = Executors.newFixedThreadPool(Math.min(maxThreads, totalBatches));
             try {
-                batches.forEach(batch -> executorService.submit(() -> processBatch(batch)));
+                for (int i = 0; i < totalBatches; i++) {
+                    final int batchIndex = i;
+                    executorService.submit(() -> {
+                        int fromIndex = batchIndex * batchSize;
+                        int toIndex = Math.min((batchIndex + 1) * batchSize, domains.size());
+                        List<String> batch = domains.subList(fromIndex, toIndex);
+                        processBatch(batch);
+                    });
+                }
             } finally {
                 executorService.shutdown();
             }
         } else {
-            // Process batches sequentially
-            batches.forEach(this::processBatch);
+            batchProcessor.run();
         }
 
-        log.info("Started creating trusted domains for {} records in {} batches", 
-                domains.size(), batches.size());
+        log.info("Started creating trusted domains for {} records in {} batches",
+                domains.size(), totalBatches);
     }
 
     private List<List<String>> createBatches(List<String> domains, int batchSize) {

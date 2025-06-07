@@ -8,14 +8,18 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import tech.mayanksoni.threatdetectionbackend.configuration.ThreatDetectionConfig;
 import tech.mayanksoni.threatdetectionbackend.dm.TrustedDomainDataManager;
 import tech.mayanksoni.threatdetectionbackend.documents.TrustedDomainDocument;
 import tech.mayanksoni.threatdetectionbackend.mappers.TrustedDomainMapper;
 import tech.mayanksoni.threatdetectionbackend.models.TrustedDomain;
 import tech.mayanksoni.threatdetectionbackend.utils.DomainUtils;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Repository
 @Slf4j
@@ -23,6 +27,7 @@ import java.util.List;
 public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManager {
     private final ReactiveMongoTemplate mongoTemplate;
     private final TrustedDomainMapper TRUSTED_DOMAIN_MAPPER;
+    private final ThreatDetectionConfig threatDetectionConfig;
 
     @Override
     public Mono<Long> countTrustedDomains() {
@@ -59,16 +64,60 @@ public class TrustedDomainMongoDataManagerImpl implements TrustedDomainDataManag
 
     @Override
     public void addTrustedDomain(List<String> domains) {
-        List<TrustedDomainDocument> trustedDomains = new ArrayList<>();
-        domains.forEach(domain -> {
-            TrustedDomainDocument trustedDomainDocument = createTrustedDomainDocument(domain);
-            trustedDomains.add(trustedDomainDocument);
-        });
+        int batchSize = threatDetectionConfig.getBatchSize();
+        int maxThreads = threatDetectionConfig.getMaxThreads();
+        boolean enableParallelProcessing = threatDetectionConfig.isEnableParallelProcessing();
+
+        log.info("Adding trusted domains with batch size: {}, max threads: {}, parallel processing: {}", 
+                batchSize, maxThreads, enableParallelProcessing);
+
+        if (domains.isEmpty()) {
+            log.info("No domains to add");
+            return;
+        }
+
+        // Create batches of domains
+        List<List<String>> batches = createBatches(domains, batchSize);
+        log.info("Split {} domains into {} batches", domains.size(), batches.size());
+
+        if (enableParallelProcessing && batches.size() > 1) {
+            // Process batches in parallel
+            ExecutorService executorService = Executors.newFixedThreadPool(
+                    Math.min(maxThreads, batches.size()));
+
+            try {
+                batches.forEach(batch -> executorService.submit(() -> processBatch(batch)));
+            } finally {
+                executorService.shutdown();
+            }
+        } else {
+            // Process batches sequentially
+            batches.forEach(this::processBatch);
+        }
+
+        log.info("Started creating trusted domains for {} records in {} batches", 
+                domains.size(), batches.size());
+    }
+
+    private List<List<String>> createBatches(List<String> domains, int batchSize) {
+        return IntStream.range(0, (domains.size() + batchSize - 1) / batchSize)
+                .mapToObj(i -> domains.subList(
+                        i * batchSize, 
+                        Math.min((i + 1) * batchSize, domains.size())))
+                .collect(Collectors.toList());
+    }
+
+    private void processBatch(List<String> batch) {
+        List<TrustedDomainDocument> trustedDomains = batch.stream()
+                .map(this::createTrustedDomainDocument)
+                .collect(Collectors.toList());
+
+        log.info("Processing batch of {} domains", batch.size());
+
         this.mongoTemplate.insertAll(trustedDomains)
-                .doOnComplete(() -> log.info("Successfully added trusted domains: {}", trustedDomains.size()))
-                .doOnError(e -> log.error("Error adding trusted domains: {}", e.getMessage()))
+                .doOnComplete(() -> log.info("Successfully added batch of {} trusted domains", trustedDomains.size()))
+                .doOnError(e -> log.error("Error adding batch of trusted domains: {}", e.getMessage()))
                 .subscribe();
-        log.info("Started creating trusted domains for {} records", trustedDomains.size());
     }
 
     @Override

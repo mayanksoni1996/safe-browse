@@ -34,5 +34,5 @@ ENV ARTIFACTORY_PATH=build/libs/*.jar
 ENV TRANCO_FILEPATH=/app/tranco_latest.csv
 COPY --from=builder /app/build/libs/*.jar /app.jar
 COPY --from=downloader tranco_latest.csv /app/tranco_latest.csv
-CMD ["java", "-jar", "/app.jar"]
+CMD ["java","-Xms512m","-Xmx2g", "-jar", "/app.jar"]
 EXPOSE 8080
